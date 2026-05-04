@@ -1,21 +1,13 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import * as Yup from 'yup'
-import { getProductos, createProducto, updateProducto } from '../services/api'
 
 const validationSchema = Yup.object({
   nombre: Yup.string().min(3, 'Mínimo 3 caracteres').required('El nombre es obligatorio'),
   categoria: Yup.string().required('La categoría es obligatoria'),
-  precio: Yup.number()
-    .typeError('Debe ser un número')
-    .positive('Debe ser un número positivo')
-    .required('El precio es obligatorio'),
-  stock: Yup.number()
-    .typeError('Debe ser un número entero')
-    .integer('Debe ser un número entero')
-    .min(0, 'No puede ser negativo')
-    .required('El stock es obligatorio'),
+  precio: Yup.number().positive('Debe ser un número positivo').required('El precio es obligatorio'),
+  stock: Yup.number().integer('Debe ser un número entero').min(0, 'No puede ser negativo').required('El stock es obligatorio'),
 })
 
 const inputStyle = {
@@ -25,93 +17,34 @@ const inputStyle = {
 
 const errorStyle = { color: '#ef4444', fontSize: '0.85rem', marginTop: '0.2rem' }
 
-function ProductFormPage() {
+function ProductFormPage({ productos = [], onGuardar }) {
   const { id } = useParams()
   const navigate = useNavigate()
-  const esEdicion = Boolean(id)
 
-  const [initialValues, setInitialValues] = useState({
-    nombre: '', categoria: '', precio: '', stock: ''
-  })
-  const [loadingData, setLoadingData] = useState(false)
-  const [guardando, setGuardando] = useState(false)
-  const [errorGuardar, setErrorGuardar] = useState(null)
-
-useEffect(() => {
-  if (!esEdicion) return
-
-  const cargarProducto = async () => {
-    setLoadingData(true)
-    try {
-      const { data } = await getProductos()
-      const producto = data.find(p => (p._id || p.id) == id)
-      if (producto) {
-        setInitialValues({
-          nombre: producto.nombre,
-          categoria: producto.categoria,
-          precio: producto.precio,
-          stock: producto.stock,
-        })
-      }
-    } catch (err) {
-      console.error('Error al cargar producto:', err)
-    } finally {
-      setLoadingData(false)
+  const initialValues = useMemo(() => {
+    if (id && productos.length > 0) {
+      const producto = productos.find(p => p._id === id)
+      if (producto) return producto
     }
-  }
+    return { nombre: '', categoria: '', precio: '', stock: '' }
+  }, [id, productos])
 
-  cargarProducto()
-}, [id, esEdicion])
-
-  const handleSubmit = async (values) => {
-    setGuardando(true)
-    setErrorGuardar(null)
-    try {
-      const payload = {
-        ...values,
-        precio: Number(values.precio),
-        stock: Number(values.stock),
-      }
-      if (esEdicion) {
-        await updateProducto(id, payload)
-      } else {
-        await createProducto(payload)
-      }
-      // Solo navega si el backend respondió exitosamente
-      navigate('/')
-    } catch (err) {
-      const msg = err.response?.data?.mensaje || 'Error al guardar. Verifica los datos e intenta de nuevo.'
-      setErrorGuardar(msg)
-      console.error(err)
-    } finally {
-      setGuardando(false)
+  const handleSubmit = (values) => {
+    const producto = {
+      ...values,
+      _id: id ? id : undefined,
+      precio: Number(values.precio),
+      stock: Number(values.stock)
     }
-  }
-
-  if (loadingData) {
-    return (
-      <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-        Cargando datos del producto...
-      </div>
-    )
+    onGuardar(producto)
+    navigate('/')
   }
 
   return (
     <div style={{ padding: '2rem', maxWidth: '600px', margin: '0 auto' }}>
       <h2 style={{ color: '#1e293b', marginBottom: '1.5rem' }}>
-        {esEdicion ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
+        {id ? '✏️ Editar Producto' : '➕ Nuevo Producto'}
       </h2>
-
-      {/* Banner de error de red */}
-      {errorGuardar && (
-        <div style={{
-          background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
-          padding: '12px 16px', color: '#dc2626', marginBottom: '16px', fontSize: '14px'
-        }}>
-          ⚠️ {errorGuardar}
-        </div>
-      )}
-
       <Formik
         initialValues={initialValues}
         validationSchema={validationSchema}
@@ -148,29 +81,18 @@ useEffect(() => {
             <ErrorMessage name="stock" component="div" style={errorStyle} />
           </div>
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button
-              type="submit"
-              disabled={guardando}
-              style={{
-                flex: 1, padding: '0.8rem',
-                background: guardando ? '#86efac' : '#16a34a',
-                color: 'white', border: 'none', borderRadius: '8px',
-                fontSize: '1rem', cursor: guardando ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s'
-              }}
-            >
-              {guardando ? '⏳ Guardando...' : '💾 Guardar'}
+            <button type="submit" style={{
+              flex: 1, padding: '0.8rem', background: '#16a34a',
+              color: 'white', border: 'none', borderRadius: '8px',
+              fontSize: '1rem', cursor: 'pointer'
+            }}>
+              💾 Guardar
             </button>
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              disabled={guardando}
-              style={{
-                flex: 1, padding: '0.8rem', background: '#64748b',
-                color: 'white', border: 'none', borderRadius: '8px',
-                fontSize: '1rem', cursor: 'pointer'
-              }}
-            >
+            <button type="button" onClick={() => navigate('/')} style={{
+              flex: 1, padding: '0.8rem', background: '#64748b',
+              color: 'white', border: 'none', borderRadius: '8px',
+              fontSize: '1rem', cursor: 'pointer'
+            }}>
               ❌ Cancelar
             </button>
           </div>

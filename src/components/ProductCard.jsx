@@ -22,7 +22,7 @@ function ProductCard({ producto, onEliminar }) {
       </p>
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
         <button
-          onClick={() => navigate(`/editar/${producto.id}`)}
+          onClick={() => navigate(`/editar/${producto._id}`)}
           style={{
             flex: 1, padding: '0.5rem', background: '#3b82f6',
             color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer'
@@ -30,7 +30,7 @@ function ProductCard({ producto, onEliminar }) {
           ✏️ Editar
         </button>
         <button
-          onClick={() => onEliminar(producto.id)}
+          onClick={() => onEliminar(producto._id)}
           style={{
             flex: 1, padding: '0.5rem', background: '#ef4444',
             color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer'
